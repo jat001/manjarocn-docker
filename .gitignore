@@ -1,6 +1,7 @@
 /*
 !/.github/
 !/.gitignore
+!/.dockerignore
 !/LICENSE
 !/README.md
 !/Dockerfile
