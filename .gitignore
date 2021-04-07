@@ -1,6 +1,7 @@
-*
-!.gitignore
-!LICENSE
-!README.md
-!Dockerfile
-!build.sh
+/*
+!/.github/
+!/.gitignore
+!/LICENSE
+!/README.md
+!/Dockerfile
+!/build.sh
