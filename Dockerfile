@@ -3,7 +3,7 @@ FROM manjarolinux/base:latest
 ARG BRANCH=stable
 
 RUN mkdir -p /gpg "/pkgcache/$BRANCH/$(uname -m)" /build
-VOLUME [ '/gpg' '/pkgcache' '/build' ]
+VOLUME [ "/gpg" "/pkgcache" "/build" ]
 
 RUN sed -i '/#set bell-style none/ s/^#//' /etc/inputrc
 
@@ -45,4 +45,4 @@ ENV PACKAGER="Manjaro CN Build Server <build@manjarocn.org>"
 ENV GPGKEY="974B3711CFB9BF2D"
 
 ADD --chmod=755 makepackage.sh /
-CMD [ '/makepackage.sh' ]
+CMD [ "/makepackage.sh" ]

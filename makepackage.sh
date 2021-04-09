@@ -2,7 +2,7 @@
 set -euo pipefail
 set -x
 
-: "${BRANCH:='stable'}"
+: "${BRANCH:=stable}"
 ARCH="$(uname -m)"
 
 [ -f "/build/PKGBUILD" ] || exit 1
@@ -26,7 +26,7 @@ done
 pacman --noconfirm --noprogressbar -Syyuu
 
 if [ "$(source PKGBUILD; type -t pkgver)" == 'function' ]; then
-    [[ "$(source PKGBUILD; echo \"\${makedepends[*]})\")" =~ 'git' ]] && pacman --noconfirm --noprogressbar -S git
+    [[ "$(source PKGBUILD; echo \"\${makedepends[@]}\" | grep -ow git)" ]] && pacman --noconfirm --noprogressbar -S git
     sudo -u builder makepkg -do
 fi
 
