@@ -2,10 +2,17 @@
 set -euo pipefail
 set -x
 
-repo='manjarocn/base'
-today=$(date -u +'%Y%m%d')
+: "${REPO:='manjarocn/base'}"
+: "${BRANCH:='stable'}"
+: "${TAG:=$(date -u +'%Y%m%d')}"
 
-DOCKER_BUILDKIT=1 docker build --progress=plain --pull --squash -t "$repo:$today" .
-docker tag "$repo:$today" "$repo:latest"
-docker push "$repo:$today"
-docker push "$repo:latest"
+DOCKER_BUILDKIT=1 docker build --progress=plain --pull --compress --squash \
+    -t "$REPO:$BRANCH-$TAG" --args "BRANCH=$BRANCH" .
+docker tag "$REPO:$BRANCH-$TAG" "$REPO:$BRANCH-latest"
+docker push "$REPO:$BRANCH-$TAG"
+docker push "$REPO:$BRANCH-latest"
+
+if [ "$BRANCH" == 'stable' ]; then
+    docker tag "$REPO:$BRANCH-$TAG" "$REPO:latest"
+    docker push "$REPO:latest"
+fi

@@ -6,7 +6,7 @@ on:
       - 'main'
 
   schedule:
-    - cron: '* 8 * * *'
+    - cron: '0 8 * * *'
 
   workflow_dispatch: {}
 
@@ -15,8 +15,10 @@ jobs:
     name: build and push
     runs-on: ubuntu-latest
     steps:
-      - name: check out the repo
-        uses: actions/checkout@v2
+      - name: enable experimental features
+        run: |
+          cat /etc/docker/daemon.json | jq '. + { "experimental": true }' | sudo tee /etc/docker/daemon.json >/dev/null
+          sudo systemctl restart docker
 
       - name: login to Docker Hub
         uses: docker/login-action@v1
@@ -24,10 +26,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: enable experimental features
-        run: |
-          cat /etc/docker/daemon.json | jq '. + { "experimental": true }' | sudo tee /etc/docker/daemon.json >/dev/null
-          sudo systemctl restart docker
+      - name: check out the repo
+        uses: actions/checkout@v2
 
       - name: build and push
         run: ./build.sh
