@@ -22,7 +22,7 @@ done
 [ -f "/build/packages/$BRANCH/$ARCH/packages.db.tar.xz" ] || \
     sudo -u builder repo-add "/build/packages/$BRANCH/$ARCH/packages.db.tar.xz"
 
-[ "${UPDATEMIRRORS:0}" -gt 0 ] && pacman-mirrors --geoip
+[ "${UPDATEMIRRORS:-0}" -gt 0 ] && pacman-mirrors --geoip
 pacman --noconfirm --noprogressbar -Syyuu
 
 if [ "$(source PKGBUILD; type -t pkgver)" == 'function' ]; then
@@ -36,7 +36,7 @@ if [ "$repo_ver" ]; then
     [ "$(vercmp $repo_ver $pkg_ver)" -ge 0 ] && exit 0
 fi
 
-[ "${IMTOOLAZYTOCHECKSUMS:0}" -gt 0 ] && sudo -u builder updpkgsums
+[ "${IMTOOLAZYTOCHECKSUMS:-0}" -gt 0 ] && sudo -u builder updpkgsums
 sudo -u builder makepkg --noconfirm --noprogressbar -Ccfs
 
 sudo -u builder repo-add -Rnsv /build/packages/packages.db.tar.xz /build/packages/*.pkg.tar.zst
