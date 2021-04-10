@@ -15,14 +15,8 @@ RUN rm -fr /etc/pacman.d/gnupg
 RUN pacman-key --init
 RUN pacman-key --populate
 
-ARG GLIBC=2.33-5
-RUN curl -fsSo glibc-linux4.pkg.tar.zst \
-    "https://repo.archlinuxcn.org/$(uname -m)/glibc-linux4-$GLIBC-$(uname -m).pkg.tar.zst"
-RUN yes | pacman -Udd --noprogressbar glibc-linux4.pkg.tar.zst
-RUN rm -f glibc-linux4.pkg.tar.zst
-
 RUN sed -Ei $'/^#CacheDir/ { s/^#//; s#=.*#= '"/pkgcache/$BRANCH/$(uname -m)"'# }; \
-/^#IgnorePkg/ { s/^#//; s/=.*/= filesystem glibc/ } \
+/^#IgnorePkg/ { s/^#//; s/=.*/= filesystem/ } \
 ' /etc/pacman.conf
 
 RUN pacman-mirrors --geoip -a -B "$BRANCH"
