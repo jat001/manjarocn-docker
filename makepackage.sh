@@ -31,11 +31,12 @@ find "$pkg_root" -name '*.pkg.tar.zst' -printf "$pkg_cache_root/%f\n" | xargs rm
 pacman -Syyuu --noconfirm --noprogressbar
 
 cd /build/workspace
+pkgname=$(source PKGBUILD && echo "$pkgname" | xargs)
 
 # update $pkgver
-[ "$(source PKGBUILD && type -t pkgver)" == 'function' ] && sudo -u builder makepkg -Cdo
+[ "$(source PKGBUILD && type -t pkgver)" == 'function' ] && sudo -u builder makepkg --cleanbuild --nodeps --nobuild --noprepare
 # `pacman -Si` returns 1 if package not in sync database
-if repover=$(pacman -Si "$(source PKGBUILD && echo "$pkgname" | xargs)" | grep -Ei '^version' | cut -d':' -f'2-' | xargs); then
+if repover=$(pacman -Si "$pkgname" | grep -Ei '^version' | cut -d':' -f'2-' | xargs); then
     pkgver="$(source PKGBUILD && echo "$pkgver" | xargs)"
     if [ "$pkgver" ]; then
         pkgrel=$(set +u; source PKGBUILD && echo "$pkgrel" | xargs)
@@ -50,6 +51,6 @@ fi
 gpg_keys=$(source PKGBUILD && echo "${validpgpkeys[@]}" | xargs)
 [ "$gpg_keys" ] && sudo -u builder gpg --recv-keys $gpg_keys
 
-sudo -u builder makepkg -Ccfs --noconfirm --noprogressbar --needed
-sudo -u builder repo-add --new --remove --sign --key "$GPGKEY" "$pkg_db" "$pkg_root/"*.pkg.tar.zst
+sudo -u builder makepkg --cleanbuild --clean --force --syncdeps --noconfirm --noprogressbar --needed
+sudo -u builder repo-add --new --remove --sign --key "$GPGKEY" "$pkg_db" "$pkg_root/$pkgname-$pkgver.pkg.tar.zst"
 rm -f "$pkg_root/"*.old "$pkg_root/"*.old.sig
