@@ -34,23 +34,24 @@ cd /build/workspace
 pkgname=$(source PKGBUILD && echo "$pkgname" | xargs)
 
 # update $pkgver
-[ "$(source PKGBUILD && type -t pkgver)" == 'function' ] && sudo -u builder makepkg --cleanbuild --nodeps --nobuild --noprepare
+# [ "$(source PKGBUILD && type -t pkgver)" == 'function' ] && sudo -u builder makepkg --cleanbuild --nodeps --nobuild --noprepare
+
+pkgver="$(source PKGBUILD && echo "$pkgver" | xargs)"
+[ "$pkgver" ] || exit 1
+pkgrel=$(source PKGBUILD && echo "$pkgrel" | xargs)
+[ "$pkgrel" ] || exit 1
+pkgver="$pkgver-$pkgrel"
+epoch=$(set +u; source PKGBUILD && echo "$epoch" | xargs)
+[ "$epoch" ] && pkgver="$epoch:$pkgver"
+
 # `pacman -Si` returns 1 if package not in sync database
-if repover=$(pacman -Si "$pkgname" | grep -Ei '^version' | cut -d':' -f'2-' | xargs); then
-    pkgver="$(source PKGBUILD && echo "$pkgver" | xargs)"
-    if [ "$pkgver" ]; then
-        pkgrel=$(set +u; source PKGBUILD && echo "$pkgrel" | xargs)
-        epoch=$(set +u; source PKGBUILD && echo "$epoch" | xargs)
-        [ "$pkgrel" ] && pkgver="$pkgver-$pkgrel"
-        [ "$epoch" ] && pkgver="$epoch:$pkgver"
-    fi
-    [ "$repover" ] && [ "$pkgver" ] && [ "$(vercmp "$repover" "$pkgver")" -ge 0 ] && exit 0
-fi
+repover=$(pacman -Si "$pkgname" | grep -Ei '^version' | cut -d':' -f'2-' | xargs) \
+    && [ "$(vercmp "$repover" "$pkgver")" -ge 0 ] && exit 0
 
 [ "${UPDATESUMS:-0}" -gt 0 ] && sudo -u builder updpkgsums
-gpg_keys=$(source PKGBUILD && echo "${validpgpkeys[@]}" | xargs)
+gpg_keys=$(set +u; source PKGBUILD && echo "${validpgpkeys[@]}" | xargs)
 [ "$gpg_keys" ] && sudo -u builder gpg --recv-keys $gpg_keys
 
 sudo -u builder makepkg --cleanbuild --clean --force --syncdeps --noconfirm --noprogressbar --needed
-sudo -u builder repo-add --new --remove --sign --key "$GPGKEY" "$pkg_db" "$pkg_root/$pkgname-$pkgver.pkg.tar.zst"
+sudo -u builder repo-add --new --remove --sign --key "$GPGKEY" "$pkg_db" "$pkg_root/$pkgname-$pkgver-$ARCH.pkg.tar.zst"
 rm -f "$pkg_root/"*.old "$pkg_root/"*.old.sig
