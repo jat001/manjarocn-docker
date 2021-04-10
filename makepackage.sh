@@ -1,42 +1,54 @@
 #!/bin/bash
 set -euo pipefail
+# rewrite the trace output to stdout
+exec 3>&1
+export BASH_XTRACEFD=3
 set -x
 
 : "${BRANCH:=stable}"
 ARCH="$(uname -m)"
+[ -f "/build/workspace/PKGBUILD" ]
 
-[ -f "/build/PKGBUILD" ] || exit 1
-cd /build
-mkdir -p "packages/$BRANCH/$ARCH" sources srcpackages
+pkg_root="/build/packages/$BRANCH/$ARCH"
+pkg_db="$pkg_root/manjarocn.db.tar.xz"
+pkg_cache_root=/pkgcache/$BRANCH/$ARCH
+mkdir -p "$pkg_root" /build/sources /build/srcpackages
 
 cp -R /gpg /home/builder/.gnupg
 chown -R builder:builder /build /home/builder
 
-[ "${PACKAGER:-}" ] && sudo -u builder gpg -K "$PACKAGER"
-[ "${GPGKEY:-}" ] && sudo -u builder gpg -K "$GPGKEY"
+[ "${PACKAGER:-}" ] && sudo -u builder gpg --list-secret-keys "$PACKAGER"
+[ "${GPGKEY:-}" ] && sudo -u builder gpg --list-secret-keys "$GPGKEY"
 sed -Ei "/^#PACKAGER/ { s/^#//; s/=.*/='$PACKAGER'/ }; /^#GPGKEY/ { s/^#//; s/=.*/='$GPGKEY'/ }" /etc/makepkg.conf
 
-for package in '/build/packages/*.pkg.tar.*'; do
-    rm -f "/pkgcache/$BRANCH/$ARCH/$package"
+sudo -u builder gpg --armor --export "$GPGKEY" | pacman-key --add /dev/stdin
+pacman-key --lsign-key "$GPGKEY"
+
+for package in "$pkg_root/"*.pkg.tar.zst; do
+    rm -f "$pkg_cache_root/${package##*/}"
 done
-[ -f "/build/packages/$BRANCH/$ARCH/packages.db.tar.xz" ] || \
-    sudo -u builder repo-add "/build/packages/$BRANCH/$ARCH/packages.db.tar.xz"
 
+[ -f "$pkg_db" ] || sudo -u builder repo-add --sign --key "$GPGKEY" "$pkg_db"
 [ "${UPDATEMIRRORS:-0}" -gt 0 ] && pacman-mirrors --geoip
-pacman --noconfirm --noprogressbar -Syyuu
+pacman -Syyuu --noconfirm --noprogressbar
 
-if [ "$(source PKGBUILD; type -t pkgver)" == 'function' ]; then
-    [[ "$(source PKGBUILD; echo \"\${makedepends[@]}\" | grep -ow git)" ]] && pacman --noconfirm --noprogressbar -S git
+cd /build/workspace
+
+if [ "$(source PKGBUILD && type -t pkgver)" == 'function' ]; then
+    $(source PKGBUILD && echo "${makedepends[@]}" | xargs | grep -Eiq '(^|\s)git(\s|$)') && pacman -S --noconfirm --noprogressbar git
     sudo -u builder makepkg -do
 fi
 
-repo_ver=$(pacman -Si "$(source PKGBUILD; echo \$pkgname)" | grep -Ei '^version' | awk -F':' '{ print $2 }' | xargs)
-if [ "$repo_ver" ]; then
-    pkg_ver="$(source PKGBUILD; echo \$pkgver)-$(source PKGBUILD; echo \$pkgrel)"
-    [ "$(vercmp $repo_ver $pkg_ver)" -ge 0 ] && exit 0
-fi
+# `pacman -Si` returns 1 if package not in sync database
+repo_ver=$(pacman -Si "$(source PKGBUILD && echo "$pkgname" | xargs)" | grep -Ei '^version' | awk -F':' '{ print $2 }' | xargs) && \
+    pkg_ver="$(source PKGBUILD && echo "$pkgver" | xargs)-$(source PKGBUILD && echo "$pkgrel" | xargs)" && \
+    [ "$repo_ver" ] && [ "$pkg_ver" != '-' ] && [ "$(vercmp "$repo_ver" "$pkg_ver")" -ge 0 ] && \
+    exit 0
 
-[ "${IMTOOLAZYTOCHECKSUMS:-0}" -gt 0 ] && sudo -u builder updpkgsums
-sudo -u builder makepkg --noconfirm --noprogressbar -Ccfs
+[ "${UPDATESUMS:-0}" -gt 0 ] && sudo -u builder updpkgsums
+gpg_keys=$(source PKGBUILD && echo "${validpgpkeys[@]}" | xargs)
+[ "$gpg_keys" ] && sudo -u builder gpg --recv-keys $gpg_keys
 
-sudo -u builder repo-add -Rnsv /build/packages/packages.db.tar.xz /build/packages/*.pkg.tar.zst
+sudo -u builder makepkg -Ccfs --noconfirm --noprogressbar
+sudo -u builder repo-add --new --remove --sign --key "$GPGKEY" "$pkg_db" "$pkg_root/"*.pkg.tar.zst
+rm -f "$pkg_root/"*.old "$pkg_root/"*.old.sig

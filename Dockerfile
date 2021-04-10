@@ -13,8 +13,7 @@ RUN echo 'builder ALL=(root) NOPASSWD:/usr/bin/pacman' > /etc/sudoers.d/makepkg
 
 RUN rm -fr /etc/pacman.d/gnupg
 RUN pacman-key --init
-RUN pacman-key --populate archlinux
-RUN pacman-key --populate manjaro
+RUN pacman-key --populate
 
 ARG GLIBC=2.33-5
 RUN curl -fsSo glibc-linux4.pkg.tar.zst \
@@ -32,7 +31,7 @@ RUN rm -f /var/lib/pacman/sync/* "/pkgcache/$BRANCH/$(uname -m)/*"
 
 RUN echo $'\n\
 [manjarocn]\n\
-SigLevel = Optional TrustAll\n\
+SigLevel = Required TrustedOnly\n\
 Server = '"file:///build/packages/$BRANCH/$(uname -m)"$'\n\
 ' >> /etc/pacman.conf
 
