@@ -7,3 +7,4 @@
 !/Dockerfile
 !/build.sh
 !/makepackage.sh
+!/patch_glibc.sh

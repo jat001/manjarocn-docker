@@ -1,2 +1,3 @@
 **
 !/makepackage.sh
+!/patch_glibc.sh

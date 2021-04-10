@@ -24,9 +24,7 @@ sed -Ei "/^#PACKAGER/ { s/^#//; s/=.*/='$PACKAGER'/ }; /^#GPGKEY/ { s/^#//; s/=.
 sudo -u builder gpg --armor --export "$GPGKEY" | pacman-key --add /dev/stdin
 pacman-key --lsign-key "$GPGKEY"
 
-for package in "$pkg_root/"*.pkg.tar.zst; do
-    rm -f "$pkg_cache_root/${package##*/}"
-done
+find "$pkg_root" -name '*.pkg.tar.zst' -printf "$pkg_cache_root/%f\n" | xargs rm -f
 
 [ -f "$pkg_db" ] || sudo -u builder repo-add --sign --key "$GPGKEY" "$pkg_db"
 [ "${UPDATEMIRRORS:-0}" -gt 0 ] && pacman-mirrors --geoip
@@ -34,21 +32,24 @@ pacman -Syyuu --noconfirm --noprogressbar
 
 cd /build/workspace
 
-if [ "$(source PKGBUILD && type -t pkgver)" == 'function' ]; then
-    $(source PKGBUILD && echo "${makedepends[@]}" | xargs | grep -Eiq '(^|\s)git(\s|$)') && pacman -S --noconfirm --noprogressbar git
-    sudo -u builder makepkg -do
-fi
-
+# update $pkgver
+[ "$(source PKGBUILD && type -t pkgver)" == 'function' ] && sudo -u builder makepkg -Cdo
 # `pacman -Si` returns 1 if package not in sync database
-repo_ver=$(pacman -Si "$(source PKGBUILD && echo "$pkgname" | xargs)" | grep -Ei '^version' | awk -F':' '{ print $2 }' | xargs) && \
-    pkg_ver="$(source PKGBUILD && echo "$pkgver" | xargs)-$(source PKGBUILD && echo "$pkgrel" | xargs)" && \
-    [ "$repo_ver" ] && [ "$pkg_ver" != '-' ] && [ "$(vercmp "$repo_ver" "$pkg_ver")" -ge 0 ] && \
-    exit 0
+if repover=$(pacman -Si "$(source PKGBUILD && echo "$pkgname" | xargs)" | grep -Ei '^version' | cut -d':' -f'2-' | xargs); then
+    pkgver="$(source PKGBUILD && echo "$pkgver" | xargs)"
+    if [ "$pkgver" ]; then
+        pkgrel=$(source PKGBUILD && echo "$pkgrel" | xargs)
+        epoch=$(source PKGBUILD && echo "$epoch" | xargs)
+        [ "$pkgrel" ] && pkgver="$pkgver-$pkgrel"
+        [ "$epoch" ] && pkgver="$epoch:$pkgver"
+    fi
+    [ "$repover" ] && [ "$pkgver" ] && [ "$(vercmp "$repover" "$pkgver")" -ge 0 ] && exit 0
+fi
 
 [ "${UPDATESUMS:-0}" -gt 0 ] && sudo -u builder updpkgsums
 gpg_keys=$(source PKGBUILD && echo "${validpgpkeys[@]}" | xargs)
 [ "$gpg_keys" ] && sudo -u builder gpg --recv-keys $gpg_keys
 
-sudo -u builder makepkg -Ccfs --noconfirm --noprogressbar
+sudo -u builder makepkg -Ccfs --noconfirm --noprogressbar --needed
 sudo -u builder repo-add --new --remove --sign --key "$GPGKEY" "$pkg_db" "$pkg_root/"*.pkg.tar.zst
 rm -f "$pkg_root/"*.old "$pkg_root/"*.old.sig
