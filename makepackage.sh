@@ -38,8 +38,8 @@ cd /build/workspace
 if repover=$(pacman -Si "$(source PKGBUILD && echo "$pkgname" | xargs)" | grep -Ei '^version' | cut -d':' -f'2-' | xargs); then
     pkgver="$(source PKGBUILD && echo "$pkgver" | xargs)"
     if [ "$pkgver" ]; then
-        pkgrel=$(source PKGBUILD && echo "$pkgrel" | xargs)
-        epoch=$(source PKGBUILD && echo "$epoch" | xargs)
+        pkgrel=$(set +u; source PKGBUILD && echo "$pkgrel" | xargs)
+        epoch=$(set +u; source PKGBUILD && echo "$epoch" | xargs)
         [ "$pkgrel" ] && pkgver="$pkgver-$pkgrel"
         [ "$epoch" ] && pkgver="$epoch:$pkgver"
     fi
