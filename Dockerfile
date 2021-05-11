@@ -30,7 +30,7 @@ RUN rm -f /var/lib/pacman/sync/* "/pkgcache/$BRANCH/$(uname -m)/*"
 
 RUN echo $'\n\
 [manjarocn]\n\
-SigLevel = Required TrustedOnly\n\
+SigLevel = Optional TrustAll\n\
 Server = '"file:///build/packages/$BRANCH/$(uname -m)"$'\n\
 ' >> /etc/pacman.conf
 

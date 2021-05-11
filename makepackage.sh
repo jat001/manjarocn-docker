@@ -32,7 +32,7 @@ find "$pkg_root" -name '*.pkg.tar.zst' -printf "$pkg_cache_root/%f\n" | xargs rm
 [ "${UPDATEMIRRORS:-0}" -gt 0 ] && pacman-mirrors --geoip
 pacman -Syyuu --noconfirm --noprogressbar
 
-function getvar () {
+function get_var () {
     varname="$1"
     required=${2:-0}
 
@@ -41,24 +41,33 @@ function getvar () {
     echo "$varval"
 }
 
+function get_pkgver () {
+    pkgver="$(get_var 'pkgver' 1)"
+    pkgrel="$(get_var 'pkgrel' 1)"
+
+    pkgver="$pkgver-$pkgrel"
+    epoch=$(get_var 'epoch')
+    [ -n "$epoch" ] && pkgver="$epoch:$pkgver"
+
+    echo "$pkgver"
+}
+
 cd /build/workspace
 
-pkgname="$(getvar 'pkgname' 1)"
-pkgver="$(getvar 'pkgver' 1)"
-pkgrel="$(getvar 'pkgrel' 1)"
-
-pkgver="$pkgver-$pkgrel"
-epoch=$(getvar 'epoch')
-[ -n "$epoch" ] && pkgver="$epoch:$pkgver"
+pkgname="$(get_var 'pkgname' 1)"
+pkgver="$(get_pkgver)"
 
 # `pacman -Si` returns 1 if package not in sync database
 repover=$(pacman -Si "$pkgname" | grep -Ei '^version' | cut -d':' -f'2-' | xargs) \
     && [ "$(vercmp "$repover" "$pkgver")" -ge 0 ] && exit 0
 
 [ "${UPDATESUMS:-0}" -gt 0 ] && sudo -u builder updpkgsums
-gpg_keys=$(getvar 'validpgpkeys[@]')
+gpg_keys=$(get_var 'validpgpkeys[@]')
 [ -n "$gpg_keys" ] && sudo -u builder gpg --recv-keys $gpg_keys
 
 sudo -u builder "SRCDEST=/build/sources/$pkgname" makepkg --cleanbuild --clean --force --syncdeps --noconfirm --noprogressbar --needed
+# update $pkgver for *-git packages
+pkgver="$(get_pkgver)"
+
 sudo -u builder repo-add --new --remove "$pkg_db" "$pkg_root/$pkgname-$pkgver-$ARCH.pkg.tar.zst"
 rm -f "$pkg_root/"*.old "$pkg_root/"*.old.sig
