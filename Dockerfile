@@ -3,7 +3,7 @@ FROM manjarolinux/base:latest
 ARG BRANCH=stable
 
 RUN mkdir -p /gpg "/pkgcache/$BRANCH/$(uname -m)" /build
-VOLUME [ "/gpg" "/pkgcache" "/build" ]
+VOLUME [ "/gpg", "/pkgcache", "/build" ]
 
 RUN sed -i '/#set bell-style none/ s/^#//' /etc/inputrc
 
