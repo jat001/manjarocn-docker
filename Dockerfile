@@ -2,8 +2,8 @@ FROM manjarolinux/base:latest
 
 ARG BRANCH=stable
 
-RUN mkdir -p /gpg "/pkgcache/$BRANCH/$(uname -m)" /build
-VOLUME [ "/gpg", "/pkgcache", "/build" ]
+RUN mkdir -p /gpg /build
+VOLUME [ "/gpg", "/build", "/var/lib/pacman/sync", "/var/cache/pacman/pkg" ]
 
 RUN sed -i '/#set bell-style none/ s/^#//' /etc/inputrc
 
@@ -13,9 +13,7 @@ RUN echo $'Defaults env_keep += "all_proxy ftp_proxy http_proxy https_proxy no_p
 builder ALL=(root) NOPASSWD:/usr/bin/pacman\n\
 ' > /etc/sudoers.d/makepkg
 
-RUN sed -Ei $'/^#CacheDir/ { s/^#//; s#=.*#= '"/pkgcache/$BRANCH/$(uname -m)"'# }; \
-/^#IgnorePkg/ { s/^#//; s/=.*/= filesystem/ } \
-' /etc/pacman.conf
+RUN sed -Ei $'/^#IgnorePkg/ { s/^#//; s/=.*/= filesystem/ }' /etc/pacman.conf
 
 ARG GLIBC
 ADD --chmod=755 patch_glibc.sh /
@@ -28,7 +26,7 @@ RUN pacman-key --populate
 
 RUN pacman-mirrors --geoip -a -B "$BRANCH"
 RUN pacman -Syyuu --noconfirm --noprogressbar --needed base-devel
-RUN rm -f /var/lib/pacman/sync/* "/pkgcache/$BRANCH/$(uname -m)/*"
+RUN rm -f /var/lib/pacman/sync/* /var/cache/pacman/pkg/*
 
 RUN echo $'\n\
 [manjarocn]\n\

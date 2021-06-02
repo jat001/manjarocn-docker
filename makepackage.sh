@@ -11,7 +11,6 @@ ARCH="$(uname -m)"
 
 pkg_root="/build/packages/$BRANCH/$ARCH"
 pkg_db="$pkg_root/manjarocn.db.tar.xz"
-pkg_cache_root=/pkgcache/$BRANCH/$ARCH
 mkdir -p "$pkg_root" /build/sources /build/srcpackages
 
 cp -R /gpg /home/builder/.gnupg
@@ -26,7 +25,7 @@ sed -Ei "/^#PACKAGER/ { s/^#//; s/=.*/='$PACKAGER'/ };
 sudo -u builder gpg --armor --export "$GPGKEY" | pacman-key --add /dev/stdin
 pacman-key --lsign-key "$GPGKEY" &>/dev/null
 
-find "$pkg_root" -name '*.pkg.tar.zst' -printf "$pkg_cache_root/%f\n" | xargs rm -f
+find "$pkg_root" -name '*.pkg.tar.zst' -printf "/var/cache/pacman/pkg/%f\n" | xargs rm -f
 
 [ -f "$pkg_db" ] || sudo -u builder repo-add "$pkg_db"
 [ "${UPDATEMIRRORS:-0}" -gt 0 ] && pacman-mirrors --geoip
@@ -57,6 +56,7 @@ cd /build/workspace
 pkgname="$(get_var 'pkgname' 1)"
 pkgver="$(get_pkgver)"
 
+[ -f "$pkg_root/$pkgname-$pkgver-$ARCH.pkg.tar.zst" ] && \
 # `pacman -Si` returns 1 if package not in sync database
 repover=$(pacman -Si "$pkgname" | grep -Ei '^version' | cut -d':' -f'2-' | xargs) \
     && [ "$(vercmp "$repover" "$pkgver")" -ge 0 ] && exit 0
