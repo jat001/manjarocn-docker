@@ -29,5 +29,11 @@ jobs:
       - name: check out the repo
         uses: actions/checkout@v2
 
-      - name: build and push
-        run: ./build.sh
+      - name: build branch stable
+        run: BRANCH=stable ./build.sh
+
+      - name: build branch testing
+        run: BRANCH=testing ./build.sh
+
+      - name: build branch unstable
+        run: BRANCH=unstable ./build.sh

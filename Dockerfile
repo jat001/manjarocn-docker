@@ -9,7 +9,9 @@ RUN sed -i '/#set bell-style none/ s/^#//' /etc/inputrc
 
 RUN useradd -m builder
 RUN mkdir -p /etc/sudoers.d
-RUN echo 'builder ALL=(root) NOPASSWD:/usr/bin/pacman' > /etc/sudoers.d/makepkg
+RUN echo $'Defaults env_keep += "all_proxy ftp_proxy http_proxy https_proxy no_proxy"\n\
+builder ALL=(root) NOPASSWD:/usr/bin/pacman\n\
+' > /etc/sudoers.d/makepkg
 
 RUN sed -Ei $'/^#CacheDir/ { s/^#//; s#=.*#= '"/pkgcache/$BRANCH/$(uname -m)"'# }; \
 /^#IgnorePkg/ { s/^#//; s/=.*/= filesystem/ } \
