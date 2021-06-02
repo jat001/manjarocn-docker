@@ -10,9 +10,13 @@ on:
 
   workflow_dispatch: {}
 
+concurrency:
+  group: build_docker_image
+  cancel-in-progress: true
+
 jobs:
   docker:
-    name: build and push
+    name: build docker image
     runs-on: ubuntu-latest
     steps:
       - name: enable experimental features
