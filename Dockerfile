@@ -7,11 +7,7 @@ VOLUME [ "/gpg", "/build", "/var/lib/pacman/sync", "/var/cache/pacman/pkg" ]
 
 RUN sed -i '/#set bell-style none/ s/^#//' /etc/inputrc
 
-RUN useradd -m builder
-RUN mkdir -p /etc/sudoers.d
-RUN echo $'Defaults env_keep += "all_proxy ftp_proxy http_proxy https_proxy no_proxy"\n\
-builder ALL=(root) NOPASSWD:/usr/bin/pacman\n\
-' > /etc/sudoers.d/makepkg
+RUN echo $'\nDefaults env_keep += "all_proxy ftp_proxy http_proxy https_proxy no_proxy"\n' >> /etc/sudoers
 
 RUN sed -Ei $'/^#IgnorePkg/ { s/^#//; s/=.*/= filesystem/ }' /etc/pacman.conf
 
