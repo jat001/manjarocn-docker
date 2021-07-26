@@ -13,8 +13,8 @@ pkg_root="/build/packages/$BRANCH/$ARCH"
 pkg_db="$pkg_root/manjarocn.db.tar.xz"
 mkdir -p "$pkg_root" /build/sources /build/srcpackages
 
-cp -R /gpg /home/builder/.gnupg
-chown -R builder:builder /build /home/builder
+cp -R /gpg /builder/.gnupg
+chown -R builder:builder /build /builder
 
 sudo -u builder gpg --list-secret-keys "$PACKAGER" >/dev/null
 sudo -u builder gpg --list-secret-keys "$GPGKEY" >/dev/null
